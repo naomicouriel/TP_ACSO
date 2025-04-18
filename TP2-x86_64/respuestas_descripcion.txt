@@ -1,0 +1,24 @@
+Nombre: Naomi Couriel
+Email: ncouriel@udesa.edu.ar
+
+Fase 1:
+La fase 1 toma la línea de texto ingresada (recibida en rdi desde main) y la compara con una cadena específica almacenada dentro del programa. Para ello, carga la dirección de la cadena objetivo (0x4c9a58) en rsi y llama a strings_not_equal(rdi, rsi). Esta función devuelve 0 si las cadenas son idénticas. La fase verifica si el resultado (eax) es cero; si no lo es (jne <bomba>), significa que las cadenas no coincidieron y la bomba explota.
+Solución: La entrada debe ser idéntica a la cadena objetivo. Usando GDB (x/s 0x4c9a58), encontré que la cadena requerida es: "He conocido, aunque tarde, sin haberme arrepentido, que es pecado cometido el decir ciertas verdades".
+
+Fase 2:
+Esta fase espera tres números enteros (num1, num2, num3) separados por espacios. La lógica requiere que el tercer número sea igual al resultado de una operación XOR entre los dos primeros, dividido por dos, y que además sea negativo. Específicamente: ((num1 XOR num2) / 2) == num3 y num3 < 0. También noté que la entrada debe terminar con un espacio para que sscanf lea correctamente el último número.
+Solución: La entrada -1 1 -1 funciona. Cálculo: (-1 XOR 1) = -2. Luego -2 / 2 = -1. Y -1 < 0
+
+Fase 3:
+La Fase 3 requiere ingresar una palabra (que exista en un array interno) y un número (palabra num). Analizando la función cuenta (que parece realizar una búsqueda binaria), descubrí que devuelve un valor (RET_VAL) que corresponde a la suma de los valores ASCII del primer carácter de cada palabra comparada durante la ruta de búsqueda hasta la coincidencia (esto por la instrucción add eax, r13d en la recursión). En phase_3, este RET_VAL se valida con dos chequeos:
+1. 401 <= RET_VAL <= 799 (verificado por lea eax,[rax-0x191]; cmp eax, 0x18e; ja <bomba>).
+2. RET_VAL == num (el número ingresado) (verificado por cmp DWORD PTR [rsp], ebx; jne <bomba>).
+Solución: Rastreando la búsqueda para la palabra 'tararear', las comparaciones previas fueron con 'engringarse', 'opugnar' y 'retinar'. La suma de los ASCII de las primeras letras ('e'+'o'+'r'+'t') es 101 + 111 + 114 + 116 = 442. Este valor cumple 401 <= 442 <= 799. Por lo tanto, la entrada correcta es tararear 442.
+
+Fase 4:
+La Fase 4 espera dos números enteros, num1 y num2 (sscanf con "%d %d"). Primero valida que sscanf lea dos números y que N = num1 & 0xF no sea 15. Luego, realiza un cálculo que, según el ensamblador, involucra un bucle iterativo con un índice fijo N que accede a un array (array.0). Este bucle termina cuando array.0[N] == 15. Sin embargo, las validaciones posteriores requieren que el bucle haya ejecutado exactamente 12 pasos (edx==12) y que la suma acumulada (ecx) sea igual a num2. Esto crea una contradicción, ya que con índice fijo el bucle solo puede terminar si N=6, lo que implica 1 solo paso. La lógica funcional real (probablemente implementada vía recursión o de forma engañosa en el assembly) sigue una secuencia donde el índice para el siguiente paso es el valor leído del array en el paso actual (Indice_Siguiente = array.0[Indice_Actual]), hasta que el valor leído es 15.
+Solución: Para desactivar la bomba, el proceso debe tomar 12 pasos y la suma acumulada (S) debe ser num2. Siguiendo la lógica Indice_Siguiente = array.0[Indice_Actual] hacia atrás desde 15, encontré que el índice inicial N que requiere 12 pasos es N=13. La simulación hacia adelante con N=13 dio 12 pasos y una suma S = 88. Por lo tanto, se necesita num1 tal que num1 & 0xF = 13 (usé num1=13) y num2 = 88. La entrada correcta es 13 88.
+
+Fase secreta:
+Esta fase no se ejecuta secuencialmente. Se activa desde phase_defused después de completar la Fase 4, pero solo si se cumplen condiciones específicas: phase_defused vuelve a parsear la entrada dada para la Fase 3 usando "%s %d %s". Debe poder leer 3 elementos, y el tercer elemento (la segunda cadena) debe ser exactamente "abrete_sesamo". Una vez activada, secret_phase lee un número (input_num), valida que 1 <= input_num <= 1001, y llama a fun7. fun7 busca input_num en un Árbol Binario de Búsqueda (BST) global (n1). La fase se desactiva solo si fun7 devuelve 0 (encuentra el número).
+Solución: Primero, para activarla, modifiqué la entrada de la Fase 3 a tararear 442 abrete_sesamo. Luego, para resolver la fase secreta, inspeccioné el BST n1 con GDB. El nodo raíz (0x4f91f0) contiene el valor 36. Como 1 <= 36 <= 1001, este número es válido. La entrada requerida es 36.
