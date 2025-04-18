@@ -24,7 +24,7 @@ string_proc_node* string_proc_node_create(uint8_t type, char* hash){
 
     node->next = NULL;
     node->previous = NULL;
-    node->hash = hash;  // solo apuntar, no copiar
+    node->hash = hash;
     node->type = type;
 
     return node;
@@ -75,7 +75,7 @@ char* string_proc_list_concat(string_proc_list* list, uint8_t type , char* hash)
 
 void string_proc_list_destroy(string_proc_list* list){
 	if (list == NULL) {
-        return; // Si la lista es NULL, no hacemos nada
+        return;
     }
 	/* borro los nodos: */
 	string_proc_node* current_node	= list->first;
@@ -96,7 +96,6 @@ void string_proc_node_destroy(string_proc_node* node){
     }
     node->next      = NULL;
     node->previous  = NULL;
-    // Remove: node->hash = NULL;
     node->type      = 0;            
     free(node);
 }
